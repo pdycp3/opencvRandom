@@ -18,16 +18,8 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="main_NCC.cpp">
+    <ClCompile Include="main_RANSAC.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LoadData.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="LoadData.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
