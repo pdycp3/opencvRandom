@@ -1,5 +1,5 @@
 #include "LoadData.h"
-void readDescriptor(float** dataset, char *labels, const char* dataPath)
+void readDescriptor(std::vector<std::vector<float>> &dataset, std::vector<int> &labels, const char* dataPath)
 {
 	FILE* dataFile = fopen(dataPath, "rb");
 	if (dataFile == NULL)
@@ -13,16 +13,21 @@ void readDescriptor(float** dataset, char *labels, const char* dataPath)
 	fread(&nCol, sizeof(int), 1, dataFile);
 	printf("nRow=%d", nRow);
 	printf("nCol=%d", nCol);
+
 	//float temp;
 	int temp;//Ó°Ïñid
+	dataset.reserve(nRow);
+	labels.reserve(nRow);
 	float* ftemp1 = new float[128];//ÌØÕ÷ÃèÊö·û
 	for (int i = 0; i < nRow; i++)
 	{
-		fread(&temp, sizeof(char), 1, dataFile);
+		std::vector<float> vecdata;
+		fread(&temp, sizeof(int), 1, dataFile);
 		fread(ftemp1, sizeof(float), 128, dataFile);
-		labels[i] = temp;
+		labels.push_back(temp);
 		for (int j = 0; j < 128; ++j)
-			dataset[i][j] = ftemp1[j];
+			vecdata.push_back( ftemp1[j]);
+		dataset.push_back(vecdata);
 	}
 	fclose(dataFile);
 	delete[] ftemp1;
@@ -38,14 +43,8 @@ void convertTwoDimensionArarayToMat(float ** dataset, cv::Mat & traindata)
 		{
 			traindata = dataset[i][j];
 
-
-
 		}
-
-
 	}
-
-
 
 }
 

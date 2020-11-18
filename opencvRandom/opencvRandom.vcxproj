@@ -147,10 +147,10 @@
   <ItemGroup>
     <ClCompile Include="LoadData.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="main_NCC.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LoadData.h" />
+    <ClInclude Include="RandomTree.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
