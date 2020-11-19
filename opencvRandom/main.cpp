@@ -1,4 +1,4 @@
-
+ï»¿
 #include "RandomTree.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -20,10 +20,20 @@
 #define NUMTREES 100
 #define DEPTHTREE 10
 #define MINNUM 10
-#define NUMIMAGE 5
+#define NUMIMAGE 20
 using namespace std;
 using namespace cv;
 using namespace ml;
+template <typename T>
+vector<size_t> sort_indexes_e(vector<T> &v)
+{
+	vector<size_t> idx(v.size());
+	for (size_t i = 0; i < v.size(); ++i)
+		idx[i] = i;
+	sort(idx.begin(), idx.end(),
+		[&v](size_t i1, size_t i2) {return v[i1] > v[i2]; });
+	return idx;
+}
 cv::Ptr<cv::ml::TrainData> prepare_train_data(const cv::Mat& data, const cv::Mat& responses, int ntrain_samples)
 {
 	using namespace cv;
@@ -42,7 +52,7 @@ class  CProcessBase
 {
 public:
 	/**
-	* @brief ¹¹Ôìº¯Êı
+	* @brief æ„é€ å‡½æ•°
 	*/
 	CProcessBase()
 	{
@@ -53,32 +63,32 @@ public:
 	}
 
 	/**
-	* @brief Îö¹¹º¯Êı
+	* @brief ææ„å‡½æ•°
 	*/
 	virtual ~CProcessBase() {}
 
 	/**
-	* @brief ÉèÖÃ½ø¶ÈĞÅÏ¢
-	* @param pszMsg			½ø¶ÈĞÅÏ¢
+	* @brief è®¾ç½®è¿›åº¦ä¿¡æ¯
+	* @param pszMsg			è¿›åº¦ä¿¡æ¯
 	*/
 	virtual void SetMessage(const char* pszMsg) = 0;
 
 	/**
-	* @brief ÉèÖÃ½ø¶ÈÖµ
-	* @param dPosition		½ø¶ÈÖµ
-	* @return ·µ»ØÊÇ·ñÈ¡ÏûµÄ×´Ì¬£¬trueÎª²»È¡Ïû£¬falseÎªÈ¡Ïû
+	* @brief è®¾ç½®è¿›åº¦å€¼
+	* @param dPosition		è¿›åº¦å€¼
+	* @return è¿”å›æ˜¯å¦å–æ¶ˆçš„çŠ¶æ€ï¼Œtrueä¸ºä¸å–æ¶ˆï¼Œfalseä¸ºå–æ¶ˆ
 	*/
 	virtual bool SetPosition(double dPosition) = 0;
 
 	/**
-	* @brief ½ø¶ÈÌõÇ°½øÒ»²½£¬·µ»Øtrue±íÊ¾¼ÌĞø£¬false±íÊ¾È¡Ïû
-	* @return ·µ»ØÊÇ·ñÈ¡ÏûµÄ×´Ì¬£¬trueÎª²»È¡Ïû£¬falseÎªÈ¡Ïû
+	* @brief è¿›åº¦æ¡å‰è¿›ä¸€æ­¥ï¼Œè¿”å›trueè¡¨ç¤ºç»§ç»­ï¼Œfalseè¡¨ç¤ºå–æ¶ˆ
+	* @return è¿”å›æ˜¯å¦å–æ¶ˆçš„çŠ¶æ€ï¼Œtrueä¸ºä¸å–æ¶ˆï¼Œfalseä¸ºå–æ¶ˆ
 	*/
 	virtual bool StepIt() = 0;
 
 	/**
-	* @brief ÉèÖÃ½ø¶È¸öÊı
-	* @param iStepCount		½ø¶È¸öÊı
+	* @brief è®¾ç½®è¿›åº¦ä¸ªæ•°
+	* @param iStepCount		è¿›åº¦ä¸ªæ•°
 	*/
 	virtual void SetStepCount(int iStepCount)
 	{
@@ -87,8 +97,8 @@ public:
 	}
 
 	/**
-	* @brief »ñÈ¡½ø¶ÈĞÅÏ¢
-	* @return ·µ»Øµ±Ç°½ø¶ÈĞÅÏ¢
+	* @brief è·å–è¿›åº¦ä¿¡æ¯
+	* @return è¿”å›å½“å‰è¿›åº¦ä¿¡æ¯
 	*/
 	string GetMessage()
 	{
@@ -96,8 +106,8 @@ public:
 	}
 
 	/**
-	* @brief »ñÈ¡½ø¶ÈÖµ
-	* @return ·µ»Øµ±Ç°½ø¶ÈÖµ
+	* @brief è·å–è¿›åº¦å€¼
+	* @return è¿”å›å½“å‰è¿›åº¦å€¼
 	*/
 	double GetPosition()
 	{
@@ -105,7 +115,7 @@ public:
 	}
 
 	/**
-	* @brief ÖØÖÃ½ø¶ÈÌõ
+	* @brief é‡ç½®è¿›åº¦æ¡
 	*/
 	void ReSetProcess()
 	{
@@ -115,22 +125,22 @@ public:
 		m_bIsContinue = true;
 	}
 
-	/*! ½ø¶ÈĞÅÏ¢ */
+	/*! è¿›åº¦ä¿¡æ¯ */
 	string m_strMessage;
-	/*! ½ø¶ÈÖµ */
+	/*! è¿›åº¦å€¼ */
 	double m_dPosition;
-	/*! ½ø¶È¸öÊı */
+	/*! è¿›åº¦ä¸ªæ•° */
 	int m_iStepCount;
-	/*! ½ø¶Èµ±Ç°¸öÊı */
+	/*! è¿›åº¦å½“å‰ä¸ªæ•° */
 	int m_iCurStep;
-	/*! ÊÇ·ñÈ¡Ïû£¬ÖµÎªfalseÊ±±íÊ¾¼ÆËãÈ¡Ïû */
+	/*! æ˜¯å¦å–æ¶ˆï¼Œå€¼ä¸ºfalseæ—¶è¡¨ç¤ºè®¡ç®—å–æ¶ˆ */
 	bool m_bIsContinue;
 };
 class CConsoleProcess : public CProcessBase
 {
 public:
 	/**
-	* @brief ¹¹Ôìº¯Êı
+	* @brief æ„é€ å‡½æ•°
 	*/
 	CConsoleProcess()
 	{
@@ -140,7 +150,7 @@ public:
 	};
 
 	/**
-	* @brief Îö¹¹º¯Êı
+	* @brief ææ„å‡½æ•°
 	*/
 	~CConsoleProcess()
 	{
@@ -148,8 +158,8 @@ public:
 	};
 
 	/**
-	* @brief ÉèÖÃ½ø¶ÈĞÅÏ¢
-	* @param pszMsg			½ø¶ÈĞÅÏ¢
+	* @brief è®¾ç½®è¿›åº¦ä¿¡æ¯
+	* @param pszMsg			è¿›åº¦ä¿¡æ¯
 	*/
 	void SetMessage(const char* pszMsg)
 	{
@@ -158,9 +168,9 @@ public:
 	}
 
 	/**
-	* @brief ÉèÖÃ½ø¶ÈÖµ
-	* @param dPosition		½ø¶ÈÖµ
-	* @return ·µ»ØÊÇ·ñÈ¡ÏûµÄ×´Ì¬£¬trueÎª²»È¡Ïû£¬falseÎªÈ¡Ïû
+	* @brief è®¾ç½®è¿›åº¦å€¼
+	* @param dPosition		è¿›åº¦å€¼
+	* @return è¿”å›æ˜¯å¦å–æ¶ˆçš„çŠ¶æ€ï¼Œtrueä¸ºä¸å–æ¶ˆï¼Œfalseä¸ºå–æ¶ˆ
 	*/
 	bool SetPosition(double dPosition)
 	{
@@ -171,8 +181,8 @@ public:
 	}
 
 	/**
-	* @brief ½ø¶ÈÌõÇ°½øÒ»²½
-	* @return ·µ»ØÊÇ·ñÈ¡ÏûµÄ×´Ì¬£¬trueÎª²»È¡Ïû£¬falseÎªÈ¡Ïû
+	* @brief è¿›åº¦æ¡å‰è¿›ä¸€æ­¥
+	* @return è¿”å›æ˜¯å¦å–æ¶ˆçš„çŠ¶æ€ï¼Œtrueä¸ºä¸å–æ¶ˆï¼Œfalseä¸ºå–æ¶ˆ
 	*/
 	bool StepIt()
 	{
@@ -215,6 +225,12 @@ private:
 	}
 };
 
+struct ImageSave 
+{
+	int nQueryId;
+	int nDstId;
+	float dMatchDist;
+};
 class RandomKDTreeMatch 
 {
 public:
@@ -223,7 +239,7 @@ public:
 		int nTrees;
 		int nPerTreeSave;
 		int nTotalSave;
-		//knn²ÎÊı
+		//knnå‚æ•°
 		int nSearchParam;
 	};
 	struct SearchResult
@@ -246,14 +262,20 @@ public:
 	void CreatKDTrees(CProcessBase * pProcess);
 	void SetQueryData(std::vector<std::vector<float>> & vecQueryVector, CProcessBase * pProcess);
 	void QuerySearch(std::vector<std::vector<SearchResult>> & queryResult, CProcessBase * pProcess);
+	void SetSourceData1(std::vector<std::vector<float>> & vecSourceData, CProcessBase * pProcess = NULL);
+	void CreatKDTrees1(CProcessBase * pProcess);
+	void QuerySearch1(std::vector<std::vector<SearchResult>> & queryResult, CProcessBase * pProcess);
 private:
-	//´æ´¢kdÊ÷µÄÈİÆ÷
+	//å­˜å‚¨kdæ ‘çš„å®¹å™¨
 	std::vector<cv::flann::Index *> m_vecRandomKdtrees;
-	//²éÑ¯ÏòÁ¿
+	//æŸ¥è¯¢å‘é‡
 	std::vector<std::vector<float>> m_vecQueryVector;
-	//¹¹½¨Ë÷ÒıÊ÷µÄÌØÕ÷ÏòÁ¿
+	//æ„å»ºç´¢å¼•æ ‘çš„ç‰¹å¾å‘é‡
 	std::vector<cv::Mat> m_vecMatSource;
 	std::vector<vector<int>> m_vecSourceIndex;
+	//æ–¹æ³•1ï¸çš„æˆå‘˜å˜é‡
+	cv::Mat m_MatSource1;
+	cv::flann::Index * m_RDTrees;
 	RKDPARAM m_RKDParam;
 };
 void RandomKDTreeMatch::InitialParam(RKDPARAM & rParam)
@@ -312,6 +334,36 @@ void RandomKDTreeMatch::SetSourceData(std::vector<std::vector<float>> & vecSourc
 		pProcess->SetMessage("finish set dataset");
 	}
 }
+void RandomKDTreeMatch::SetSourceData1(std::vector<std::vector<float>> & vecSourceData, CProcessBase * pProcess)
+{
+	int nSize = vecSourceData.size();
+	if (nSize <= 0)
+	{
+		cout << "please check your train dataset" << endl;
+		return;
+	}
+	int nTree = m_RKDParam.nTrees > 0 ? m_RKDParam.nTrees : 20;
+	if (pProcess != NULL)
+	{
+		pProcess->ReSetProcess();
+		pProcess->SetMessage("start set dataset");
+	}
+	if (!m_MatSource1.empty())
+	{
+		m_MatSource1.release();
+	}
+	int nCol = vecSourceData[0].size();
+	cv::Mat initialmat;
+	for (int i = 0; i < nSize; ++i)
+	{
+		cv::Mat Sample(1, nCol, cv::DataType<float>::type, vecSourceData[i].data());
+		m_MatSource1.push_back(Sample);
+	}
+	if (pProcess != NULL)
+	{
+		pProcess->SetMessage("finish set dataset");
+	}
+}
 void RandomKDTreeMatch::CreatKDTrees(CProcessBase * pProcess)
 {
 	int nTree = m_RKDParam.nTrees > 0 ? m_RKDParam.nTrees : 20;
@@ -336,6 +388,26 @@ void RandomKDTreeMatch::CreatKDTrees(CProcessBase * pProcess)
 		pProcess->SetPosition((i + 1)*1.0 / nTree);
 	}
 	if (pProcess!=NULL)
+	{
+		pProcess->SetMessage("creat trees was finished");
+	}
+}
+void RandomKDTreeMatch::CreatKDTrees1(CProcessBase * pProcess)
+{
+	int nTree = m_RKDParam.nTrees > 0 ? m_RKDParam.nTrees : 20;
+	if (pProcess != NULL)
+	{
+		pProcess->ReSetProcess();
+		pProcess->SetMessage("start creat trees");
+	}
+	cv::flann::KDTreeIndexParams indexparam(nTree);
+	if (m_RDTrees!=NULL)
+	{
+		m_RDTrees->release();
+	}
+	m_RDTrees= new cv::flann::Index(m_MatSource1, indexparam);
+
+	if (pProcess != NULL)
 	{
 		pProcess->SetMessage("creat trees was finished");
 	}
@@ -398,39 +470,132 @@ void RandomKDTreeMatch::QuerySearch(std::vector<std::vector<SearchResult>> & que
 
 
 }
+void RandomKDTreeMatch::QuerySearch1(std::vector<std::vector<SearchResult>> & queryResult, CProcessBase * pProcess)
+{
+	if (m_vecQueryVector.size() <= 0)
+	{
+		cout << "please set query vector first" << endl;
+	}
+	int nSize = m_vecQueryVector.size();
+	queryResult.reserve(nSize);
+	cv::flann::SearchParams params(m_RKDParam.nSearchParam);
+	if (pProcess != NULL)
+	{
+		pProcess->ReSetProcess();
+		pProcess->SetMessage("start query............");
+		pProcess->SetStepCount(nSize);
+	}
+	for (int i = 0; i < nSize; ++i)
+	{
+		std::vector<SearchResult> vecQueryResult;
+		SearchResult searchResult;
+		vector<float> queryDist(m_RKDParam.nPerTreeSave);
+		vector<int> vecIndex(m_RKDParam.nPerTreeSave);
+		m_RDTrees->knnSearch(m_vecQueryVector[i], vecIndex, queryDist, m_RKDParam.nPerTreeSave, params);
+		for (int k = 0; k < m_RKDParam.nPerTreeSave; ++k)
+		{
+			searchResult.id = vecIndex[k];
+			searchResult.distance = queryDist[k];
+			vecQueryResult.push_back(searchResult);
+		}
+		queryResult.push_back(vecQueryResult);
+		pProcess->SetPosition((i + 1)*1.0 / nSize);
+	}
+	if (pProcess != NULL)
+	{
+		pProcess->SetMessage("query finished..............");
+	}
+}
 int main(int argc, char* argv[])
 {	
 	vector<vector<float>>trainset;
 	vector<int> trainlabels;
-	//ÊäÈëÊı¾İ
+	//è¾“å…¥æ•°æ®
 	string strFeatrueBinary= "G:\\data\\arialimage20\\uav20.ibx";
 	string strSaveRtree = "G:\\data\\arialimage20\\uav20RtreeModel.xml";
 	string strSaveResult = "G:\\data\\arialimage20\\uav20result.txt";
+	string strHeatResult = "G:\\data\\arialimage20\\uav20heatScaleLn.txt";
+	//string strFeatrueBinary = "G:\\data\\south-building\\southbuilding.ibx";
+	//string strSaveRtree = "G:\\data\\south - building\\southbuilding.xml";
+	//string strSaveResult = "G:\\data\\south-building\\southbuilding.txt";
+	//string strHeatResult = "G:\\data\\south-building\\southbuildingHeat.txt";
 	//string strFeatrueBinary = "G:\\data\\uavtest\\uavexhaust.ibx";
 	//string strSaveRtree = "G:\\data\\uavtest\\uavexhaustRtreeModel.xml";
 	//string strSaveResult = "G:\\data\\uavtest\\uavexhaustresult.xml";
+
 	 //RTrees for classification
 
 
-	//¼ÓÔØÃèÊö×Ó
+	//åŠ è½½æè¿°å­
 	readDescriptor(trainset, trainlabels, strFeatrueBinary.c_str());
-	//½¨Á¢Ëæ»úkdtree
+	//test yuanyangben shuju 
+	//cv::Mat initialmat;
+	//int nSize = trainset.size();
+	//std::vector<int> vec_index;
+	//std::vector<float> vecDist;
+	//vecDist.reserve(2);
+	//vec_index.reserve(2);
+
+	//for (int i = 0; i < nSize; ++i)
+	//{
+	//	cv::Mat Sample(1, 128, cv::DataType<float>::type, trainset[i].data());
+	//	initialmat.push_back(Sample);
+
+	//}
+	//int nCooount = 0;
+	//int nCCount = 0;
+	//cv::flann::KDTreeIndexParams indexparam(10);
+	//cv::flann::Index* ptree = new cv::flann::Index(initialmat, indexparam);
+	//for (int i=0;i<nSize;++i)
+	//{
+	//	cv::Mat Sample(1, 128, cv::DataType<float>::type, trainset[i].data());
+	//	ptree->knnSearch(Sample, vec_index, vecDist, 2);
+	//	if (vec_index[0]==i)
+	//	{
+	//		nCooount++;
+	//	}
+	//	if (vecDist[1]<1500)
+	//	{
+	//		nCCount++;
+	//	}
+
+
+	//}
+	//cout << "preceision=" << nCooount * 1.0 / nSize << endl;
+	//cout << "dist=" << nCCount * 1.0 / nSize << endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	//å»ºç«‹éšæœºkdtree
 	std::vector<std::vector<RandomKDTreeMatch::SearchResult>> vecResult;
 	RandomKDTreeMatch *pRandomKDTreeMatch = new RandomKDTreeMatch();
 	RandomKDTreeMatch::RKDPARAM rparam;
 	rparam.nTrees = 10;
 	rparam.nPerTreeSave = 3;
-	rparam.nSearchParam = 32;
-	rparam.nTotalSave = 7;
+	rparam.nSearchParam = 128;
+	rparam.nTotalSave = 5;
 	pRandomKDTreeMatch->InitialParam(rparam);
 	CProcessBase* pProcess = new CConsoleProcess();
 	pRandomKDTreeMatch->SetSourceData(trainset, pProcess);
 	pRandomKDTreeMatch->CreatKDTrees(pProcess);
 	pRandomKDTreeMatch->SetQueryData(trainset, pProcess);
 	pRandomKDTreeMatch->QuerySearch(vecResult, pProcess);
-	vector<vector<float>> vecDistanceCount(NUMIMAGE);
-	vector<vector<int>> vecNumCount(NUMIMAGE);
-	vector<vector<float>> vecOverScore(NUMIMAGE);
+	vector<vector<float>> vecDistanceCount;
+	vector<vector<int>> vecNumCount;
+	vector<vector<float>> vecOverScore;
 	for (int i=0;i<NUMIMAGE;++i)
 	{
 		vector<float> vectmep(NUMIMAGE, 0);
@@ -440,36 +605,100 @@ int main(int argc, char* argv[])
 		vecNumCount.push_back(vecNum);
 		vecOverScore.push_back(vecoverlap);
 	}
-	for (size_t i = 0; i < vecResult.size(); i++)
+	float nTotalSize = vecResult.size()*1.0/100;
+	int nSize = vecResult.size();
+	int j = 10;
+	int nFirstNSave = 5;
+	for (size_t i = 0; i < nSize; i++)
 	{
-		vector<float>  vecTemp = trainset[i];
+		
 		vector<RandomKDTreeMatch::SearchResult> &vectemp=vecResult[i];
 		sort(vectemp.begin(), vectemp.end(), RandomKDTreeMatch::cmpl);
-		
-		
+		//åˆå§‹åŒ–ç›¸åŒåŒ¹é…ç‚¹å¯¹id
+		int nNextId = vecResult[i][0].id;
+		int nSamplesave = 0;
+		int nLabelIdLast = 0;
 		for (int k=0;k<vecResult[i].size();++k)
 		{
-			
-			if (vectemp[k].id==i)
+			int nCurrenid = vectemp[k].id;
+			//ç§»é™¤åŒä¸€ä¸ªç‚¹äº’åŒ¹é…
+			if (nCurrenid ==i)
 				continue;
-			
-		    
+			//ç§»é™¤ç›¸åŒåŒ¹é…ç‚¹å¯¹
+			if (nCurrenid ==nNextId)
+	            continue;
+			nNextId = nCurrenid;
+			//ç§»é™¤åŒä¸€å¼ å½±åƒçš„åŒ¹é…
+			if (trainlabels[i]==trainlabels[nCurrenid])
+				continue;
+			if (nSamplesave>nFirstNSave)
+				break;
+			//å¼€å§‹ç»Ÿè®¡
+			//åŒ¹é…ç‚¹æ•°ç»Ÿè®¡
+			int nSourecelabel = trainlabels[i];
+			int nCurrenlabel = trainlabels[nCurrenid];
+			vecNumCount[nSourecelabel][nCurrenlabel] += 1;
+			//è·ç¦»ç»Ÿè®¡ç”±äºé‡‡ç”¨çš„æ˜¯æ¬§å¼è·ç¦»çš„å¹³æ–¹ä¸ºäº†é˜²æ­¢æ•°è¿‡å¤§é‡‡ç”¨å¹³å‡å€¼æ¥è¿›è¡Œç»Ÿè®¡
+
+			if (vecNumCount[nSourecelabel][nCurrenlabel]==1)
+			{
+				vecDistanceCount[nSourecelabel][nCurrenlabel] += vectemp[k].distance;
+				nSamplesave++;
+			}
+			else {
+				vecDistanceCount[nSourecelabel][nCurrenlabel] += (vectemp[k].distance - vecDistanceCount[nSourecelabel][nCurrenlabel]) / vecNumCount[nSourecelabel][nCurrenlabel];
+				nSamplesave++;
+			}
 			
 		}
-	
-		cout << "test" << endl;
-
+		float dProcess = i / nTotalSize;
+	    if (dProcess>j)
+	    {
+			printf(">>>%f%%", dProcess);
+			j += 10;
+	    }
 	}
-
-
-
-
-
-
-
-	
-
-
+	printf("\n");
+	//å¼€å§‹è¯„åˆ†ç»Ÿè®¡
+	for (int i=0;i<NUMIMAGE;++i)
+	{
+		for (int j=0;j<NUMIMAGE;++j)
+		{
+			if(i==j)
+				continue;
+			if (vecNumCount[i][j]<=20)
+				continue;
+			float dSqrt = sqrtf(vecDistanceCount[i][j]);
+			vecOverScore[i][j] = log(vecNumCount[i][j] * exp(-dSqrt/vecNumCount[i][j]));
+		}
+	}
+	//è¾“å‡ºåˆ°æ–‡ä»¶
+	//for (int i=0;i<NUMIMAGE-1;++i)
+	//{
+	//	for (int j=i+1;j<NUMIMAGE;++j)
+	//	{
+	//		double dMean = (vecOverScore[i][j] + vecOverScore[j][i]) / 2;
+	//		vecOverScore[i][j] = vecOverScore[j][i] = dMean;
+	//	}
+	//}
+	//for (int i=0;i<NUMIMAGE;++i)
+	//{
+	//	vector<size_t>  vecIndex;
+	//	vecIndex = sort_indexes_e(vecOverScore[i]);
+	//	for (int j=4;j<vecIndex.size();++j)
+	//	{
+	//		vecOverScore[i][vecIndex[j]] = 0;
+	//	}
+	//}
+	ofstream fileout;
+	fileout.open(strHeatResult.c_str(), std::ios::out);
+	for (int i=0;i<NUMIMAGE;++i)
+	{
+		for (int j=0;j<NUMIMAGE;++j)
+			fileout << vecOverScore[i][j] << ",";
+		fileout << endl;
+	}
+	fileout.close();
 	return 0;
 }
 
