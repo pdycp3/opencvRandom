@@ -9,7 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <strstream>
-#define TRAIN_NUM 208860
+#define TRAIN_NUM 1420660
 #ifndef STD_API
 #define STD_API __stdcall
 #endif
@@ -20,7 +20,7 @@
 #define NUMTREES 100
 #define DEPTHTREE 10
 #define MINNUM 10
-#define NUMIMAGE 20
+#define NUMIMAGE 128
 using namespace std;
 using namespace cv;
 using namespace ml;
@@ -48,6 +48,7 @@ cv::Ptr<cv::ml::TrainData> prepare_train_data(const cv::Mat& data, const cv::Mat
 
 	return ml::TrainData::create(data, ml::ROW_SAMPLE, responses, noArray(), sample_idx, noArray(), noArray());
 }
+
 class  CProcessBase
 {
 public:
@@ -228,9 +229,15 @@ private:
 struct ImageSave 
 {
 	int nQueryId;
+	int nQueryLabel;
+	int nDstLabel;
 	int nDstId;
 	float dMatchDist;
 };
+static bool cmpImasave(const ImageSave & a, const ImageSave & b)
+{
+	return a.dMatchDist < b.dMatchDist;
+}
 class RandomKDTreeMatch 
 {
 public:
@@ -511,14 +518,14 @@ int main(int argc, char* argv[])
 	vector<vector<float>>trainset;
 	vector<int> trainlabels;
 	//输入数据
-	string strFeatrueBinary= "G:\\data\\arialimage20\\uav20.ibx";
-	string strSaveRtree = "G:\\data\\arialimage20\\uav20RtreeModel.xml";
-	string strSaveResult = "G:\\data\\arialimage20\\uav20result.txt";
-	string strHeatResult = "G:\\data\\arialimage20\\uav20heatScaleLn.txt";
-	//string strFeatrueBinary = "G:\\data\\south-building\\southbuilding.ibx";
-	//string strSaveRtree = "G:\\data\\south - building\\southbuilding.xml";
-	//string strSaveResult = "G:\\data\\south-building\\southbuilding.txt";
-	//string strHeatResult = "G:\\data\\south-building\\southbuildingHeat.txt";
+	//string strFeatrueBinary= "G:\\data\\arialimage20\\uav20.ibx";
+	//string strSaveRtree = "G:\\data\\arialimage20\\uav20RtreeModel.xml";
+	//string strSaveResult = "G:\\data\\arialimage20\\uav20result.txt";
+	//string strHeatResult = "G:\\data\\arialimage20\\uav20heatScaleLn.txt";
+	string strFeatrueBinary = "G:\\data\\south-building\\southbuilding.ibx";
+	string strSaveRtree = "G:\\data\\south-building\\southbuilding.xml";
+	string strSaveResult = "G:\\data\\south-building\\southbuilding.txt";
+	string strHeatResult = "G:\\data\\south-building\\southbuildingHeat.txt";
 	//string strFeatrueBinary = "G:\\data\\uavtest\\uavexhaust.ibx";
 	//string strSaveRtree = "G:\\data\\uavtest\\uavexhaustRtreeModel.xml";
 	//string strSaveResult = "G:\\data\\uavtest\\uavexhaustresult.xml";
@@ -566,26 +573,13 @@ int main(int argc, char* argv[])
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 	//建立随机kdtree
 	std::vector<std::vector<RandomKDTreeMatch::SearchResult>> vecResult;
 	RandomKDTreeMatch *pRandomKDTreeMatch = new RandomKDTreeMatch();
 	RandomKDTreeMatch::RKDPARAM rparam;
 	rparam.nTrees = 10;
-	rparam.nPerTreeSave = 3;
-	rparam.nSearchParam = 128;
+	rparam.nPerTreeSave = 5;
+	rparam.nSearchParam = 32;
 	rparam.nTotalSave = 5;
 	pRandomKDTreeMatch->InitialParam(rparam);
 	CProcessBase* pProcess = new CConsoleProcess();
@@ -608,16 +602,20 @@ int main(int argc, char* argv[])
 	float nTotalSize = vecResult.size()*1.0/100;
 	int nSize = vecResult.size();
 	int j = 10;
-	int nFirstNSave = 5;
+	//存储每张影像的匹配点对
+	std::vector<vector<ImageSave>> vecAllImagesave;
+	vecAllImagesave.reserve(NUMIMAGE);
+	int nLastLabel = 0;
+	vector<ImageSave> vecImage;
+	int nLabelIdLast = trainlabels[0];
 	for (size_t i = 0; i < nSize; i++)
 	{
-		
 		vector<RandomKDTreeMatch::SearchResult> &vectemp=vecResult[i];
 		sort(vectemp.begin(), vectemp.end(), RandomKDTreeMatch::cmpl);
 		//初始化相同匹配点对id
 		int nNextId = vecResult[i][0].id;
 		int nSamplesave = 0;
-		int nLabelIdLast = 0;
+		
 		for (int k=0;k<vecResult[i].size();++k)
 		{
 			int nCurrenid = vectemp[k].id;
@@ -631,24 +629,39 @@ int main(int argc, char* argv[])
 			//移除同一张影像的匹配
 			if (trainlabels[i]==trainlabels[nCurrenid])
 				continue;
-			if (nSamplesave>nFirstNSave)
-				break;
-			//开始统计
-			//匹配点数统计
 			int nSourecelabel = trainlabels[i];
 			int nCurrenlabel = trainlabels[nCurrenid];
-			vecNumCount[nSourecelabel][nCurrenlabel] += 1;
+			//开始存储
+			if (trainlabels[i]!=nLastLabel)
+			{
+				vecAllImagesave.push_back(vecImage);
+				vecImage.clear();
+				nLastLabel = trainlabels[i];
+			}
+
+			ImageSave stuImagesave;
+			stuImagesave.dMatchDist = vectemp[k].distance;
+			stuImagesave.nQueryId = i;
+			stuImagesave.nQueryLabel = nSourecelabel;
+			stuImagesave.nDstId = vectemp[k].id;
+			stuImagesave.nDstLabel = nCurrenlabel;
+			vecImage.push_back(stuImagesave);
+			
+			//开始统计
+			//匹配点数统计
+		
+			//vecNumCount[nSourecelabel][nCurrenlabel] += 1;
 			//距离统计由于采用的是欧式距离的平方为了防止数过大采用平均值来进行统计
 
-			if (vecNumCount[nSourecelabel][nCurrenlabel]==1)
-			{
-				vecDistanceCount[nSourecelabel][nCurrenlabel] += vectemp[k].distance;
-				nSamplesave++;
-			}
-			else {
-				vecDistanceCount[nSourecelabel][nCurrenlabel] += (vectemp[k].distance - vecDistanceCount[nSourecelabel][nCurrenlabel]) / vecNumCount[nSourecelabel][nCurrenlabel];
-				nSamplesave++;
-			}
+			//if (vecNumCount[nSourecelabel][nCurrenlabel]==1)
+			//{
+			//	vecDistanceCount[nSourecelabel][nCurrenlabel] += vectemp[k].distance;
+			//
+			//}
+			//else {
+			//	vecDistanceCount[nSourecelabel][nCurrenlabel] += (vectemp[k].distance - vecDistanceCount[nSourecelabel][nCurrenlabel]) / vecNumCount[nSourecelabel][nCurrenlabel];
+			//
+			//}
 			
 		}
 		float dProcess = i / nTotalSize;
@@ -658,7 +671,37 @@ int main(int argc, char* argv[])
 			j += 10;
 	    }
 	}
+ 	vecAllImagesave.push_back(vecImage);
 	printf("\n");
+     //筛选当前距离最近的查询点对
+	for (int i=0;i<NUMIMAGE;++i)
+	{
+		int nSaveSize = vecAllImagesave[i].size();
+		vector<ImageSave> &vecISve = vecAllImagesave[i];
+		sort(vecISve.begin(), vecISve.end(), cmpImasave);
+		float dMaxdist = vecISve[nSaveSize-1].dMatchDist;
+		float dMindisat = vecISve[0].dMatchDist;
+		float d2Min = dMaxdist * 0.1;
+		for (int j=0;j<nSaveSize;++j)
+		{
+			if (vecISve[j].dMatchDist<=d2Min)
+			{
+				int nQL = vecISve[j].nQueryLabel;
+				int nDL = vecISve[j].nDstLabel;
+				vecNumCount[nQL][nDL] += 1;
+				if (vecNumCount[nQL][nDL]==1)
+				{
+					vecDistanceCount[nQL][nDL] += vecISve[j].dMatchDist;
+				}
+				else
+				{
+					vecDistanceCount[nQL][nDL] += (vecISve[j].dMatchDist - vecDistanceCount[nQL][nDL]) / vecNumCount[nQL][nDL];
+				}
+			}
+		}
+	}
+
+
 	//开始评分统计
 	for (int i=0;i<NUMIMAGE;++i)
 	{
@@ -666,10 +709,11 @@ int main(int argc, char* argv[])
 		{
 			if(i==j)
 				continue;
-			if (vecNumCount[i][j]<=20)
+			if (vecNumCount[i][j]<=10)
 				continue;
 			float dSqrt = sqrtf(vecDistanceCount[i][j]);
-			vecOverScore[i][j] = log(vecNumCount[i][j] * exp(-dSqrt/vecNumCount[i][j]));
+			float dScore = log(vecNumCount[i][j] * exp(-dSqrt / vecNumCount[i][j]));
+			vecOverScore[i][j] = dScore<=0?0:dScore;
 		}
 	}
 	//输出到文件
