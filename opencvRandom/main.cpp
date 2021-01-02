@@ -9,7 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <strstream>
-#define TRAIN_NUM 117106
+#define TRAIN_NUM 746604
 #ifndef STD_API
 #define STD_API __stdcall
 #endif
@@ -20,7 +20,7 @@
 #define NUMTREES 100
 #define DEPTHTREE 10
 #define MINNUM 10
-#define NUMIMAGE 12
+#define NUMIMAGE 55
 using namespace std;
 using namespace cv;
 using namespace ml;
@@ -275,6 +275,13 @@ struct ImageSave
 	int nDstId;
 	float dMatchDist;
 };
+struct SingleImageSave 
+{
+	int nQueryId;
+	float  dMatchDist;
+};
+
+
 static bool cmpImasave(const ImageSave & a, const ImageSave & b)
 {
 	return a.dMatchDist < b.dMatchDist;
@@ -282,6 +289,10 @@ static bool cmpImasave(const ImageSave & a, const ImageSave & b)
 static bool cmpImasaveId(const ImageSave & a, const ImageSave & b)
 {
 	return a.nQueryId < b.nQueryId;
+}
+static bool cmpSISDist(const SingleImageSave &a, const SingleImageSave & b)
+{
+	return a.dMatchDist < b.dMatchDist;
 }
 class RandomKDTreeMatch 
 {
@@ -575,10 +586,14 @@ int main(int argc, char* argv[])
 	//string strFeatrueBinary = "G:\\data\\uavtest\\uavexhaust.ibx";
 	//string strSaveRtree = "G:\\data\\uavtest\\uavexhaustRtreeModel.xml";
 	//string strSaveResult = "G:\\data\\uavtest\\uavexhaustresult.xml";
-	string strFeatrueBinary = "D:\\3DOpenSource\\Cameratest\\camertest.ibx";
-	string strSaveRtree = "D:\\3DOpenSource\\Cameratest\\camertest.xml";
-	string strSaveResult = "D:\\3DOpenSource\\Cameratest\\camertest.txt";
-	string strHeatResult = "D:\\3DOpenSource\\Cameratest\\camertestheat.txt";
+	//string strFeatrueBinary = "D:\\3DOpenSource\\Cameratest\\camertest.ibx";
+	//string strSaveRtree = "D:\\3DOpenSource\\Cameratest\\camertest.xml";
+	//string strSaveResult = "D:\\3DOpenSource\\Cameratest\\camertest.txt";
+	//string strHeatResult = "D:\\3DOpenSource\\Cameratest\\camertestheat.txt";
+	string strFeatrueBinary = "G:\\data\\unorderedtest\\1\\1.ibx";
+	string strSaveRtree = "G:\\data\\unorderedtest\\1\\1.xml";
+	string strSaveResult = "G:\\data\\unorderedtest\\1\\1test.txt";
+	string strHeatResult = "G:\\data\\unorderedtest\\1\\1heat.txt";
 
 	 //RTrees for classification
 
@@ -627,7 +642,7 @@ int main(int argc, char* argv[])
 	std::vector<std::vector<RandomKDTreeMatch::SearchResult>> vecResult;
 	RandomKDTreeMatch *pRandomKDTreeMatch = new RandomKDTreeMatch();
 	RandomKDTreeMatch::RKDPARAM rparam;
-	rparam.nTrees = 20;
+	rparam.nTrees = 5;
 	rparam.nPerTreeSave = 2;
 	rparam.nSearchParam = 32;
 	rparam.nTotalSave = 5;
@@ -640,6 +655,7 @@ int main(int argc, char* argv[])
 	vector<vector<float>> vecDistanceCount;
 	vector<vector<int>> vecNumCount;
 	vector<vector<float>> vecOverScore;
+	//初始化存储中间变量空间
 	for (int i=0;i<NUMIMAGE;++i)
 	{
 		vector<float> vectmep(NUMIMAGE, 0);
@@ -651,16 +667,20 @@ int main(int argc, char* argv[])
 	}
 	float nTotalSize = vecResult.size()*1.0/100;
 	int nSize = vecResult.size();
+	//进度定义
 	int j = 10;
 	//存储每张影像的匹配点对
 	std::vector<vector<ImageSave>> vecAllImagesave;
 	vecAllImagesave.reserve(NUMIMAGE);
 	int nLastLabel = 0;
+	//统计当前影像的存储内容
 	vector<ImageSave> vecImage;
 	int nLabelIdLast = trainlabels[0];
 	for (size_t i = 0; i < nSize; i++)
 	{
+		//输出当前特征描述符的查询结果
 		vector<RandomKDTreeMatch::SearchResult> &vectemp=vecResult[i];
+	    //当前点的查询结果的距离从小到大进行排序
 		sort(vectemp.begin(), vectemp.end(), RandomKDTreeMatch::cmpl);
 		//初始化相同匹配点对id
 		int nNextId = vecResult[i][0].id;
@@ -681,7 +701,7 @@ int main(int argc, char* argv[])
 				continue;
 			int nSourecelabel = trainlabels[i];
 			int nCurrenlabel = trainlabels[nCurrenid];
-			//开始存储
+			//开始存储，查询向量由原向量组成，那么每张影像的邻接向量查询全部存储下来
 			if (trainlabels[i]!=nLastLabel)
 			{
 				vecAllImagesave.push_back(vecImage);
@@ -765,6 +785,7 @@ int main(int argc, char* argv[])
 		float dMaxdist = vecISve[nSaveSize - 1].dMatchDist;
 		float dMindisat = vecISve[0].dMatchDist;
 		float d2Min = dMaxdist * 0.1;
+		//float d2Min = dMindisat * 3;
 		for (int j = 0; j < nSaveSize; ++j)
 		{
 			if (vecISve[j].dMatchDist <= d2Min)
@@ -778,54 +799,22 @@ int main(int argc, char* argv[])
 		}
 	}
 	//按照查询id排序,并移除相同id
-	//for (int i=0;i<NUMIMAGE;++i)
-	//{
-	//	for (int j=0;j<NUMIMAGE;++j)
-	//	{
-	//		int nCheck = j + i * NUMIMAGE;
-	//		if (vecCount[nCheck].size()<=1)
-	//			continue;
-	//		sort(vecCount[nCheck].begin(), vecCount[nCheck].end(), cmpImasaveId);
-	//		map<int, double> mapContainer;
-	//		for (int j=0;j<vecCount[nCheck].size();++j)
-	//		{
-	//			int nQuid = vecCount[nCheck][j].nQueryId;
-	//			double nMdist = vecCount[nCheck][j].dMatchDist;
-	//			bool bInsertState = UniqueInsert(mapContainer, nQuid, nMdist);
-	//		}
-	//		for (auto t:mapContainer)
-	//		{
-	//			vecNumCount[i][j] += 1;
-	//			if (vecNumCount[i][j] == 1)
-	//			{
-	//				vecDistanceCount[i][j] += t.second;
-	//			}
-	//			else
-	//			{
-	//				vecDistanceCount[i][j] += (t.second - vecDistanceCount[i][j]) / vecNumCount[i][j];
-	//			}
-	//		}
-	//	}
-	//}
-	//版本三
-	for (int i = 0; i < NUMIMAGE; ++i)
+	for (int i=0;i<NUMIMAGE;++i)
 	{
-		for (int j = 0; j < NUMIMAGE; ++j)
+		for (int j=0;j<NUMIMAGE;++j)
 		{
 			int nCheck = j + i * NUMIMAGE;
-			if (vecCount[nCheck].size() <= 1)
+			if (vecCount[nCheck].size()<=1)
 				continue;
 			sort(vecCount[nCheck].begin(), vecCount[nCheck].end(), cmpImasaveId);
 			map<int, double> mapContainer;
-			for (int j = 0; j < vecCount[nCheck].size(); ++j)
+			for (int j=0;j<vecCount[nCheck].size();++j)
 			{
 				int nQuid = vecCount[nCheck][j].nQueryId;
 				double nMdist = vecCount[nCheck][j].dMatchDist;
 				bool bInsertState = UniqueInsert(mapContainer, nQuid, nMdist);
 			}
-		   //移除过多的匹配点对
-
-			for (auto t : mapContainer)
+			for (auto t:mapContainer)
 			{
 				vecNumCount[i][j] += 1;
 				if (vecNumCount[i][j] == 1)
@@ -839,12 +828,57 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+	//版本三
+	//for (int i = 0; i < NUMIMAGE; ++i)
+	//{
+	//	for (int j = 0; j < NUMIMAGE; ++j)
+	//	{
+	//		int nCheck = j + i * NUMIMAGE;
+	//		if (vecCount[nCheck].size() <= 1)
+	//			continue;
+	//		sort(vecCount[nCheck].begin(), vecCount[nCheck].end(), cmpImasaveId);
+	//		map<int, double> mapContainer, mapConvert;
+	//		for (int j = 0; j < vecCount[nCheck].size(); ++j)
+	//		{
+	//			int nQuid = vecCount[nCheck][j].nQueryId;
+	//			double nMdist = vecCount[nCheck][j].dMatchDist;
+	//			bool bInsertState = UniqueInsert(mapContainer, nQuid, nMdist);
+	//		}
+	//		//构早匹配距离点对移除距离较大的点对
+	//		vector<SingleImageSave> vecImageSaveOne;
+	//		for (auto y : mapContainer)
+	//		{
+	//			SingleImageSave tempsingleiamge;
+	//			tempsingleiamge.nQueryId = y.first;
+	//			tempsingleiamge.dMatchDist = y.second;
+	//			vecImageSaveOne.push_back(tempsingleiamge);
+	//		}
+	//		std::sort(vecImageSaveOne.begin(), vecImageSaveOne.end(), cmpSISDist);
+	//		int nSizeSave = vecImageSaveOne.size()*0.3;
+	//		for (int k = 0; k < nSizeSave; ++k)
+	//		{
+	//			mapConvert.insert(pair<int, double>(vecImageSaveOne[k].nQueryId, vecImageSaveOne[k].dMatchDist));
+	//		}
 
 
+	//		//移除同一幅影像的错误点对引入ransac
+	//		std::cout << "mapsize=" << mapConvert.size() << endl;
+	//		for (auto t : mapConvert)
+	//		{
+	//			vecNumCount[i][j] += 1;
+	//			if (vecNumCount[i][j] == 1)
+	//			{
+	//				vecDistanceCount[i][j] += t.second;
+	//			}
+	//			else
+	//			{
+	//				vecDistanceCount[i][j] += (t.second - vecDistanceCount[i][j]) / vecNumCount[i][j];
+	//			}
+	//		}
+	//	}
+	//}
 
-
-
-
+	//不同版本的输出为个数和距离的统计
 	//开始评分统计
 	for (int i=0;i<NUMIMAGE;++i)
 	{
